@@ -243,7 +243,7 @@ namespace MapsExchange
         {
             if (!Settings.ShowOnAtlas.Value) return;
 
-            var atlas = GameController.Game.IngameState.IngameUi.AtlasPanel;
+            var atlas = GameController.Game.IngameState.IngameUi.Atlas;
 
             if (LastVisible != atlas.IsVisible || CompletedMaps == null)
             {
