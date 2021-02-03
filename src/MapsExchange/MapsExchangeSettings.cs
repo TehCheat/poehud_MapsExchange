@@ -9,6 +9,7 @@ namespace MapsExchange
     public class MapsExchangeSettings : ISettings
     {
         public Dictionary<string, int> MapStashAmount = new Dictionary<string, int>();
+        public Dictionary<string, int[]> MapRegionsAmount = new Dictionary<string, int[]>();
 
         public MapsExchangeSettings()
         {
@@ -17,6 +18,8 @@ namespace MapsExchange
             ShowPenalty = new ToggleNode(true);
         }
 
+        [Menu("Show Exchange maps")]
+        public ToggleNode ShowExchange { get; set; } = new ToggleNode(true);
         [Menu("Borders Width")]
         public RangeNode<int> BordersWidth { get; set; }
         [Menu("Spacing")]
@@ -74,6 +77,6 @@ namespace MapsExchange
 
         //[Menu("League")] // gonna use from GameController.Game.IngameState.ServerData.League
         //public ListNode League { get; set; } = new ListNode();
-        public ToggleNode Enable { get; set; } = new ToggleNode(true);
+        public ToggleNode Enable { get; set; } = new ToggleNode(false);
     }
 }

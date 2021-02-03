@@ -40,7 +40,15 @@ namespace MapsExchange
             {86, 77.99f}
         };
 
-        private readonly List<int> InventShapersOrbs = new List<int>();
+        private readonly Color[] _atlasInventLayerColors = new[]
+        {
+            Color.Gray,
+            Color.White,
+            Color.Yellow,
+            Color.OrangeRed,
+            Color.Red,
+        };
+
         private readonly PoeTradeProcessor TradeProcessor = new PoeTradeProcessor();
         private IList<WorldArea> BonusCompletedMaps;
         private Dictionary<string, int> CachedDropLvl = new Dictionary<string, int>();
@@ -200,6 +208,7 @@ namespace MapsExchange
                 return false;
 
             Input.RegisterKey(Keys.LControlKey);
+
             return true;
         }
 
@@ -254,7 +263,6 @@ namespace MapsExchange
                     CompletedMaps = GameController.Game.IngameState.ServerData.CompletedAreas;
                     BonusCompletedMaps = GameController.Game.IngameState.ServerData.BonusCompletedAreas;
                     ShapeUpgradedMaps = GameController.Game.IngameState.ServerData.ShapedMaps;
-                    ScanPlayerInventForShapersOrb();
                 }
             }
 
@@ -268,6 +276,7 @@ namespace MapsExchange
             {
                 var area = atlasMap.Area;
                 var mapName = area.Name;
+
                 if (mapName.Contains("Realm")) continue;
 
                 var layer = GameController.Game.IngameState.ServerData.GetAtlasRegionUpgradesByRegion(atlasMap.AtlasRegion);
@@ -322,7 +331,7 @@ namespace MapsExchange
                 mapNameSize.X += 5;
 
                 var nameBoxRect = new RectangleF(textRect.X - mapNameSize.X / 2, textRect.Y - mapNameSize.Y, mapNameSize.X,
-                    mapNameSize.Y);
+                                                 mapNameSize.Y);
 
                 Graphics.DrawBox(nameBoxRect, textBgColor);
 
@@ -350,7 +359,7 @@ namespace MapsExchange
                     textSize = Graphics.MeasureText(labelText, testSize);
 
                     penaltyRect = new RectangleF(textRect.X - mapNameSize.X / 2 - textSize.X, textRect.Y - textSize.Y, textSize.X,
-                        textSize.Y);
+                                                 textSize.Y);
 
                     Graphics.DrawBox(penaltyRect, Color.Black);
                     Graphics.DrawText(labelText, penaltyRect.Center.Translate(3, -8), areaLvlColor, testSize, FontAlign.Center);
@@ -361,7 +370,7 @@ namespace MapsExchange
                         var buyButtonRect = new RectangleF(textRect.X - butTextWidth / 2, textRect.Y - testSize * 2, butTextWidth, testSize);
 
                         Graphics.DrawImage("ImagesAtlas.png", buyButtonRect, new RectangleF(.367f, .731f, .184f, .223f),
-                            new Color(255, 255, 255, 255));
+                                           new Color(255, 255, 255, 255));
 
                         //buyButtonRect
                         //ImGui.Button()
@@ -371,26 +380,6 @@ namespace MapsExchange
 
                 var imgRectSize = 60 * scale;
                 var imgDrawRect = new RectangleF(centerPos.X - imgRectSize / 2, centerPos.Y - imgRectSize / 2, imgRectSize, imgRectSize);
-
-                if (InventShapersOrbs.Count > 0)
-                {
-
-                    if (!ShapeUpgradedMaps.Contains(area))
-                    {
-
-                        if (InventShapersOrbs.Contains(tier))
-                        {
-                            var shapedRect = imgDrawRect;
-                            var sizeOffset = 30 * scale;
-                            shapedRect.Left -= sizeOffset;
-                            shapedRect.Right += sizeOffset;
-                            shapedRect.Top -= sizeOffset;
-                            shapedRect.Bottom += sizeOffset;
-
-                            Graphics.DrawImage("ImagesAtlas.png", shapedRect, new RectangleF(0, 0, .5f, .731f), new Color(155, 0, 255, 255));
-                        }
-                    }
-                }
 
                 if (fill)
                     Graphics.DrawImage("ImagesAtlas.png", imgDrawRect, new RectangleF(.5f, 0, .5f, .731f), fillColor);
@@ -412,34 +401,39 @@ namespace MapsExchange
 
                         Graphics.DrawBox(
                             new RectangleF(centerPos.X - mapCountSize.X / 2, centerPos.Y - mapCountSize.Y / 2, mapCountSize.X,
-                                mapCountSize.Y), Color.Black);
+                                           mapCountSize.Y), Color.Black);
 
                         textColor.A = 255;
                         Graphics.DrawText(amount.ToString(), centerPos.Translate(0, -5), textColor, testSize, FontAlign.Center);
                     }
                 }
             }
+
+            DrawAtlasRegionMaps();
         }
 
-        private void ScanPlayerInventForShapersOrb()
+        private void DrawAtlasRegionMaps()
         {
-            InventShapersOrbs.Clear();
-            var playerInvent = GameController.Game.IngameState.ServerData.GetPlayerInventoryByType(InventoryTypeE.MainInventory);
-
-            foreach (var item in playerInvent.Items)
+            foreach (var keyValuePair in GameController.Files.AtlasRegions.RegionIndexDictionary)
             {
-                var path = item.Path;
-                if (string.IsNullOrEmpty(path) || !path.Contains("/MapUpgrades/")) continue;
-                if (!item.HasComponent<Base>()) continue;
+                DrawRegionAmount(keyValuePair.Key, keyValuePair.Value.Name);
+            }
+        }
 
-                var baseName = item.GetComponent<Base>().Name;
-                if (string.IsNullOrEmpty(baseName) || !baseName.Contains("Shaper's Orb")) continue;
+        private void DrawRegionAmount(int atlasInvSlot, string regionName)
+        {
+            var drawPos = GameController.Game.IngameState.IngameUi.Atlas.InventorySlots[atlasInvSlot].GetClientRectCache
+                                        .TopRight;
 
-                var tierStr = baseName.Replace("Shaper's Orb (Tier ", string.Empty).Replace(")", string.Empty);
-                int tierValue;
+            if (Settings.MapRegionsAmount.TryGetValue(regionName, out var maps))
+            {
+                for (var i = 0; i < maps.Length; i++)
+                {
+                    var amount = maps[i];
 
-                if (int.TryParse(tierStr, out tierValue))
-                    InventShapersOrbs.Add(tierValue);
+                    Graphics.DrawText($"L{i}: {amount}", drawPos, _atlasInventLayerColors[i]);
+                    drawPos.Y += 15;
+                }
             }
         }
 
@@ -518,14 +512,19 @@ namespace MapsExchange
             MapItems = new List<MapItem>();
 
             if (checkAmount)
+            {
                 Settings.MapStashAmount.Clear();
+                Settings.MapRegionsAmount.Clear();
+            }
 
             foreach (var invItem in items)
             {
                 var item = invItem.Item;
+
                 if (item == null) continue;
 
                 var bit = GameController.Files.BaseItemTypes.Translate(item.Path);
+
                 if (bit == null) continue;
 
                 if (bit.ClassName != "Map") continue;
@@ -541,12 +540,26 @@ namespace MapsExchange
 
                 var baseName = bit.BaseName;
                 var map = item.GetComponent<Map>();
+
+                if (map == null) continue;
+
                 var mapItem = new MapItem(baseName, drawRect, map.Tier);
                 var mapComponent = item.GetComponent<Map>();
 
+                if (mapComponent == null) continue;
+
                 if (checkAmount)
                 {
-                    var areaName = mapComponent.Area.Name;
+                    var area = mapComponent.Area;
+
+                    if (area == null)
+                    {
+                        LogError($"Area is null on {item.Address:X} {item.Path}", 3);
+
+                        continue;
+                    }
+
+                    var areaName = area.Name;
                     var mods = item.GetComponent<Mods>();
 
                     if (mods.ItemRarity == ItemRarity.Unique)
@@ -556,6 +569,35 @@ namespace MapsExchange
                     }
 
                     areaName += $":{mapComponent.Tier}";
+
+                    var nodes = GameController.Files.AtlasNodes.EntriesList
+                                              .Where(x => x.Area.Id == area.Id).ToList();
+
+                    var node = nodes.FirstOrDefault();
+
+                    if (node == null)
+                    {
+                        //LogError($"Cannot find AtlasNode for area {mapComponent.Area}");
+                    }
+                    else
+                    {
+                        var layerIndex = node.GetLayerByTier(mapComponent.Tier);
+
+                        if (layerIndex != -1 && layerIndex < 5)
+                        {
+                            if (!Settings.MapRegionsAmount.TryGetValue(node.AtlasRegion.Name, out var list))
+                            {
+                                list = new int[5];
+                                Settings.MapRegionsAmount[node.AtlasRegion.Name] = list;
+                            }
+
+                            list[layerIndex]++;
+                        }
+                        else
+                        {
+                            //LogError($"Cannot find layer for area {mapComponent.Area} with tier {mapComponent.Tier}. Layer result: {layerIndex}");
+                        }
+                    }
 
                     if (!Settings.MapStashAmount.ContainsKey(areaName))
                         Settings.MapStashAmount.Add(areaName, 1);
@@ -568,9 +610,9 @@ namespace MapsExchange
             }
 
             var sortedMaps = (from demoClass in MapItems
-                                  //where demoClass.Tier >= Settings.MinTier && demoClass.Tier <= Settings.MaxTier
+                              //where demoClass.Tier >= Settings.MinTier && demoClass.Tier <= Settings.MaxTier
                               group demoClass by $"{demoClass.Name}|{demoClass.Tier}"
-                    into groupedDemoClass
+                              into groupedDemoClass
                               select groupedDemoClass
                 ).ToDictionary(gdc => gdc.Key, gdc => gdc.ToList());
 
@@ -600,6 +642,9 @@ namespace MapsExchange
 
         private void HiglightExchangeMaps()
         {
+            if (!Settings.ShowExchange.Value)
+                return;
+
             foreach (var drapMap in MapItems)
             {
                 Graphics.DrawFrame(drapMap.DrawRect, drapMap.DrawColor, Settings.BordersWidth.Value);
@@ -630,6 +675,7 @@ namespace MapsExchange
             foreach (var item in items)
             {
                 var entity = item?.Item;
+
                 if (entity == null) continue;
 
                 var bit = GameController.Files.BaseItemTypes.Translate(entity.Path);
@@ -722,6 +768,7 @@ namespace MapsExchange
                 if (!ArenaEffectiveLevels.TryGetValue(arenaLevel, out var scale))
                 {
                     LogError($"Can't calc ArenaEffectiveLevels from arenaLevel: {arenaLevel}", 2);
+
                     return 0;
                 }
 
@@ -738,6 +785,7 @@ namespace MapsExchange
                 xpMultiplier *= 1d / (1 + 0.1 * (characterLevel - 94));
 
             xpMultiplier = Math.Max(xpMultiplier, 0.01);
+
             return xpMultiplier;
         }
 
