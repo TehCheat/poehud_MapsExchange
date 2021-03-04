@@ -51,7 +51,6 @@
     <Compile Include="MapsExchange.cs" />
     <Compile Include="MapsExchangeSettings.cs" />
     <Compile Include="Mouse.cs" />
-    <Compile Include="PoeTradeProcessor.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
